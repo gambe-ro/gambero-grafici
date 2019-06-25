@@ -4,6 +4,7 @@ import pandas as pd
 import count_per_day_graph
 import day_of_the_week_graph
 import count_per_week_graph
+import post_per_tag_graph
 from bokeh.plotting import save
 from bokeh.layouts import row, column
 
@@ -30,9 +31,25 @@ post_per_week = pd.read_sql(
 fig_2 = count_per_week_graph.plot(pd.to_datetime(post_per_week["week"].add('-0'), format='%Y-%W-%w'),
                                   post_per_week["count"], "Commenti per settimana")
 
-post_per_day_of_week = pd.read_sql(
+day_of_week = pd.read_sql(
     'select count(*) as count, WEEKDAY(created_at) as day from comments group by WEEKDAY(created_at);', con=gambero_db)
-fig_3 = day_of_the_week_graph.plot(post_per_day_of_week["day"], post_per_day_of_week["count"],
+fig_3 = day_of_the_week_graph.plot(day_of_week["day"], day_of_week["count"],
                                    "Commenti per giorno della settimana")
 
-save(column(row(fig_1, fig_2), fig_3), filename="/tmp/graph.html", title="Gambe.ro grafici")
+most_used_tags = pd.read_sql(
+"""select tag as tag, count(*) as count from taggings as ts join tags as t on t.id=ts.tag_id join stories as s on s.id=ts.story_id 
+group by tag order by count(*) desc limit 30;""",
+con=gambero_db)
+
+fig_4 = post_per_tag_graph.plot(most_used_tags["tag"][::-1], most_used_tags["count"][::-1],
+                                   "Tag più usate")
+
+least_used_tags = pd.read_sql(
+    """select tag as tag, count(*) as count from taggings as ts join tags as t on t.id=ts.tag_id join stories as s on s.id=ts.story_id 
+    group by tag order by count(*) asc limit 20;""",
+    con=gambero_db)
+
+fig_5 = post_per_tag_graph.plot(least_used_tags["tag"], least_used_tags["count"],
+                                "Tag meno usate")
+
+save(column(row(fig_1, fig_2), row(fig_3), fig_4, fig_5), filename="/tmp/graph.html", title="Gambe.ro grafici")
