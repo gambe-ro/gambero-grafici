@@ -5,6 +5,7 @@ import count_per_day_graph
 import day_of_the_week_graph
 import count_per_week_graph
 import post_per_tag_graph
+import upvotes_hour_of_day
 from bokeh.plotting import save
 from bokeh.layouts import row, column
 
@@ -52,4 +53,10 @@ least_used_tags = pd.read_sql(
 fig_5 = post_per_tag_graph.plot(least_used_tags["tag"], least_used_tags["count"],
                                 "Tag meno usate")
 
-save(column(row(fig_1, fig_2), row(fig_3), fig_4, fig_5), filename="/tmp/graph.html", title="Gambe.ro grafici")
+stories_upvotes_by_hour = pd.read_sql(
+    'select count(vote)/count(distinct(v.story_id)) as count, HOUR(s.created_at) as hour from stories as s join votes as v on s.id=story_id group by HOUR(s.created_at);', con=gambero_db)
+fig_6 = upvotes_hour_of_day.plot(stories_upvotes_by_hour["hour"], stories_upvotes_by_hour["count"],
+                                   "Performance storie per ora di creazione")
+
+
+save(column(row(fig_1, fig_2), row(fig_3,fig_6), fig_4, fig_5), filename="/tmp/graph.html", title="Gambe.ro grafici")
